@@ -146,6 +146,36 @@ export default function DashboardPage() {
     setSlotBookedServices(prev => new Set([...prev, serviceId]));
     toast.success("Slot booked! Check your active tickets.");
     fetchTickets();
+    fetchServicesForBooking();
+  };
+
+  const handleCancelBooking = async (booking: any) => {
+    if (!user) return;
+    setCancellingBooking(booking.id);
+
+    try {
+      // Cancel the slot booking
+      await supabase.from("slot_bookings").update({ status: "cancelled" }).eq("id", booking.id);
+
+      // Decrement booked_count on the slot
+      if (booking.service_slots?.booked_count > 0) {
+        await supabase.from("service_slots").update({ 
+          booked_count: booking.service_slots.booked_count - 1 
+        }).eq("id", booking.slot_id);
+      }
+
+      // Cancel associated ticket if exists
+      if (booking.ticket_id) {
+        await supabase.from("queue_tickets").update({ status: "cancelled" }).eq("id", booking.ticket_id);
+      }
+
+      toast.success("Slot booking cancelled");
+      fetchTickets();
+      fetchServicesForBooking();
+    } catch (err) {
+      toast.error("Failed to cancel booking");
+    }
+    setCancellingBooking(null);
   };
 
   return (
