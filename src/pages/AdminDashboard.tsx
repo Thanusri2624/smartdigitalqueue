@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { BarChart3, CheckCircle, Clock, PhoneCall, Users, XCircle } from "lucide-react";
+import { BarChart3, CalendarDays, CheckCircle, Clock, PhoneCall, Settings, Users, XCircle } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
+import ServiceManagement from "@/components/admin/ServiceManagement";
+import SlotManagement from "@/components/admin/SlotManagement";
+import StaffActivityLogs from "@/components/admin/StaffActivityLogs";
 
 const statusColors: Record<string, string> = {
   waiting: "bg-warning/10 text-warning",
@@ -18,11 +21,7 @@ const statusColors: Record<string, string> = {
 };
 
 const priorityOrder: Record<string, number> = {
-  emergency: 0,
-  senior: 1,
-  pregnant: 1,
-  disabled: 1,
-  normal: 2,
+  emergency: 0, senior: 1, pregnant: 1, disabled: 1, normal: 2,
 };
 
 export default function AdminDashboard() {
@@ -55,24 +54,16 @@ export default function AdminDashboard() {
     const updateData: Record<string, any> = { status };
     if (status === "serving") updateData.called_at = new Date().toISOString();
     if (status === "completed") updateData.completed_at = new Date().toISOString();
-
     const { error } = await supabase.from("queue_tickets").update(updateData).eq("id", ticketId);
     if (error) toast.error(error.message);
     else toast.success(`Ticket updated to ${status}`);
   };
 
   const callNext = async (serviceId?: string) => {
-    let query = supabase
-      .from("queue_tickets")
-      .select("*")
-      .eq("status", "waiting");
+    let query = supabase.from("queue_tickets").select("*").eq("status", "waiting");
     if (serviceId) query = query.eq("service_id", serviceId);
     const { data } = await query;
-    if (!data || data.length === 0) {
-      toast.info("No tickets waiting");
-      return;
-    }
-    // Sort by priority then by created_at
+    if (!data || data.length === 0) { toast.info("No tickets waiting"); return; }
     const sorted = data.sort((a, b) => {
       const pa = priorityOrder[a.priority] ?? 2;
       const pb = priorityOrder[b.priority] ?? 2;
@@ -81,8 +72,6 @@ export default function AdminDashboard() {
     });
     const next = sorted[0];
     await updateStatus(next.id, "serving");
-
-    // Notify user
     if (next.user_id) {
       await supabase.from("notifications").insert({
         user_id: next.user_id,
@@ -93,10 +82,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const filteredTickets = filterStatus === "all"
-    ? tickets
-    : tickets.filter((t) => t.status === filterStatus);
-
+  const filteredTickets = filterStatus === "all" ? tickets : tickets.filter((t) => t.status === filterStatus);
   const waitingCount = tickets.filter((t) => t.status === "waiting").length;
   const servingCount = tickets.filter((t) => t.status === "serving").length;
   const completedToday = tickets.filter(
@@ -111,11 +97,10 @@ export default function AdminDashboard() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-display font-bold">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Manage queues, services, and users</p>
+          <p className="text-muted-foreground">Manage queues, services, staff, and analytics</p>
         </div>
         <Button className="gradient-primary gap-2" onClick={() => callNext()}>
-          <PhoneCall className="h-4 w-4" />
-          Call Next
+          <PhoneCall className="h-4 w-4" /> Call Next
         </Button>
       </div>
 
@@ -123,63 +108,43 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <Card className="shadow-card border-0">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center">
-              <Clock className="h-5 w-5 text-warning" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{waitingCount}</p>
-              <p className="text-xs text-muted-foreground">Waiting</p>
-            </div>
+            <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center"><Clock className="h-5 w-5 text-warning" /></div>
+            <div><p className="text-2xl font-bold">{waitingCount}</p><p className="text-xs text-muted-foreground">Waiting</p></div>
           </CardContent>
         </Card>
         <Card className="shadow-card border-0">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
-              <Users className="h-5 w-5 text-success" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{servingCount}</p>
-              <p className="text-xs text-muted-foreground">Serving</p>
-            </div>
+            <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center"><Users className="h-5 w-5 text-success" /></div>
+            <div><p className="text-2xl font-bold">{servingCount}</p><p className="text-xs text-muted-foreground">Serving</p></div>
           </CardContent>
         </Card>
         <Card className="shadow-card border-0">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <CheckCircle className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{completedToday}</p>
-              <p className="text-xs text-muted-foreground">Completed Today</p>
-            </div>
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><CheckCircle className="h-5 w-5 text-primary" /></div>
+            <div><p className="text-2xl font-bold">{completedToday}</p><p className="text-xs text-muted-foreground">Completed Today</p></div>
           </CardContent>
         </Card>
         <Card className="shadow-card border-0">
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <BarChart3 className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{Math.round(avgWait)}</p>
-              <p className="text-xs text-muted-foreground">Avg Wait (min)</p>
-            </div>
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><BarChart3 className="h-5 w-5 text-primary" /></div>
+            <div><p className="text-2xl font-bold">{Math.round(avgWait)}</p><p className="text-xs text-muted-foreground">Avg Wait (min)</p></div>
           </CardContent>
         </Card>
       </div>
 
       <Tabs defaultValue="queue" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="queue">Queue</TabsTrigger>
-          <TabsTrigger value="services">Services</TabsTrigger>
+          <TabsTrigger value="services"><Settings className="h-4 w-4 mr-1" />Services</TabsTrigger>
+          <TabsTrigger value="slots"><CalendarDays className="h-4 w-4 mr-1" />Slots</TabsTrigger>
           <TabsTrigger value="counters">Counters</TabsTrigger>
+          <TabsTrigger value="activity">Staff Activity</TabsTrigger>
         </TabsList>
 
         <TabsContent value="queue" className="space-y-4">
           <div className="flex items-center gap-4 mb-4">
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Filter by status" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Tickets</SelectItem>
                 <SelectItem value="waiting">Waiting</SelectItem>
@@ -189,7 +154,6 @@ export default function AdminDashboard() {
               </SelectContent>
             </Select>
           </div>
-
           <div className="space-y-2">
             {filteredTickets.map((ticket) => {
               const svc = services.find(s => s.id === ticket.service_id);
@@ -228,31 +192,16 @@ export default function AdminDashboard() {
                 </Card>
               );
             })}
-            {filteredTickets.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">No tickets found</p>
-            )}
+            {filteredTickets.length === 0 && <p className="text-center text-muted-foreground py-8">No tickets found</p>}
           </div>
         </TabsContent>
 
         <TabsContent value="services">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {services.map((s) => (
-              <Card key={s.id} className="shadow-card border-0">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{s.name}</p>
-                      <p className="text-sm text-muted-foreground">{s.description}</p>
-                      <p className="text-xs text-muted-foreground mt-1">~{s.estimated_time_minutes} min per service</p>
-                    </div>
-                    <Badge variant={s.is_active ? "default" : "secondary"}>
-                      {s.is_active ? "Active" : "Inactive"}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <ServiceManagement />
+        </TabsContent>
+
+        <TabsContent value="slots">
+          <SlotManagement />
         </TabsContent>
 
         <TabsContent value="counters">
@@ -272,6 +221,10 @@ export default function AdminDashboard() {
               );
             })}
           </div>
+        </TabsContent>
+
+        <TabsContent value="activity">
+          <StaffActivityLogs />
         </TabsContent>
       </Tabs>
     </div>
