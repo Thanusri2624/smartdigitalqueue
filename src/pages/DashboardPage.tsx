@@ -88,13 +88,14 @@ export default function DashboardPage() {
       .select("*")
       .eq("user_id", user.id);
 
-    // Get user's existing slot bookings
+    // Get user's existing slot bookings with slot details
     const { data: bookings } = await supabase
       .from("slot_bookings")
-      .select("*, service_slots(service_id)")
+      .select("*, service_slots(service_id, slot_date, slot_time, booked_count)")
       .eq("user_id", user.id)
       .eq("status", "booked");
 
+    setSlotBookings(bookings || []);
     const bookedServiceIds = new Set(
       (bookings || []).map((b: any) => b.service_slots?.service_id).filter(Boolean)
     );
