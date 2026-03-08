@@ -9,12 +9,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Bell, LayoutDashboard, LogOut, Menu, Settings, Shield, User, X } from "lucide-react";
+import { Bell, ClipboardList, LayoutDashboard, LogOut, Menu, Settings, Shield, User, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function Navbar() {
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, isStaff, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -47,6 +47,7 @@ export default function Navbar() {
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    ...(isStaff || isAdmin ? [{ href: "/staff", label: "Staff", icon: ClipboardList }] : []),
     ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: Shield }] : []),
   ];
 
@@ -66,11 +67,7 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => (
               <Link key={link.href} to={link.href}>
-                <Button
-                  variant={isActive(link.href) ? "secondary" : "ghost"}
-                  size="sm"
-                  className="gap-2"
-                >
+                <Button variant={isActive(link.href) ? "secondary" : "ghost"} size="sm" className="gap-2">
                   <link.icon className="h-4 w-4" />
                   {link.label}
                 </Button>
@@ -92,25 +89,25 @@ export default function Navbar() {
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <User className="h-5 w-5" />
-                  </Button>
+                  <Button variant="ghost" size="icon"><User className="h-5 w-5" /></Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
                   <DropdownMenuItem onClick={() => navigate("/profile")}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Profile
+                    <Settings className="mr-2 h-4 w-4" /> Profile
                   </DropdownMenuItem>
+                  {(isStaff || isAdmin) && (
+                    <DropdownMenuItem onClick={() => navigate("/staff")}>
+                      <ClipboardList className="mr-2 h-4 w-4" /> Staff Panel
+                    </DropdownMenuItem>
+                  )}
                   {isAdmin && (
                     <DropdownMenuItem onClick={() => navigate("/admin")}>
-                      <Shield className="mr-2 h-4 w-4" />
-                      Admin Panel
+                      <Shield className="mr-2 h-4 w-4" /> Admin Panel
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleSignOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign Out
+                    <LogOut className="mr-2 h-4 w-4" /> Sign Out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -132,8 +129,7 @@ export default function Navbar() {
           {navLinks.map((link) => (
             <Link key={link.href} to={link.href} onClick={() => setMobileOpen(false)}>
               <Button variant={isActive(link.href) ? "secondary" : "ghost"} className="w-full justify-start gap-2">
-                <link.icon className="h-4 w-4" />
-                {link.label}
+                <link.icon className="h-4 w-4" /> {link.label}
               </Button>
             </Link>
           ))}
