@@ -142,11 +142,10 @@ export default function DashboardPage() {
   // Services ready for slot booking (docs verified, not already booked)
   const bookableServices = servicesWithDocs.filter(s => s.allVerified && !slotBookedServices.has(s.serviceId));
 
-  const handleSlotBooked = (serviceId: string) => {
+  const handleSlotBooked = (serviceId: string, ticketId: string) => {
     setSlotBookedServices(prev => new Set([...prev, serviceId]));
-    toast.success("Slot booked! Check your active tickets.");
-    fetchTickets();
-    fetchServicesForBooking();
+    toast.success("Slot booked! Redirecting to your ticket...");
+    navigate(`/ticket/${ticketId}`);
   };
 
   const handleCancelBooking = async (booking: any) => {
