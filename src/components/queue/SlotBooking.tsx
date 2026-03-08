@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { CalendarDays, CalendarIcon, Clock, Loader2 } from "lucide-react";
 import { format } from "date-fns";
@@ -22,7 +23,8 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
   const [slots, setSlots] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [selectedTime, setSelectedTime] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
 
   useEffect(() => {
     if (!serviceId) return;
@@ -40,27 +42,24 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
       });
   }, [serviceId]);
 
-  // Dates that have available slots
   const availableDates = useMemo(() => {
     const dates = new Set<string>();
     slots.forEach(s => dates.add(s.slot_date));
     return dates;
   }, [slots]);
 
-  // Find matching slot for selected date + time
+  // Find slot that matches the user's selected time range
   const matchedSlot = useMemo(() => {
-    if (!selectedDate || !selectedTime) return null;
+    if (!selectedDate || !startTime || !endTime) return null;
     const dateStr = format(selectedDate, "yyyy-MM-dd");
     return slots.find(s => {
       if (s.slot_date !== dateStr) return false;
-      const startTime = s.slot_time?.slice(0, 5);
-      const endTime = s.end_time?.slice(0, 5);
-      if (!startTime || !endTime) return selectedTime === startTime;
-      return selectedTime >= startTime && selectedTime < endTime;
+      const slotStart = s.slot_time?.slice(0, 5);
+      const slotEnd = s.end_time?.slice(0, 5);
+      return slotStart === startTime && slotEnd === endTime;
     }) || null;
-  }, [slots, selectedDate, selectedTime]);
+  }, [slots, selectedDate, startTime, endTime]);
 
-  // Available time ranges for selected date
   const availableRanges = useMemo(() => {
     if (!selectedDate) return [];
     const dateStr = format(selectedDate, "yyyy-MM-dd");
@@ -100,7 +99,7 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
       ticket: ticketNumber,
       service: serviceName,
       slot_date: slot.slot_date,
-      slot_time: `${slot.slot_time?.slice(0, 5)} - ${slot.end_time?.slice(0, 5) || "?"}`,
+      slot_time: `${startTime} - ${endTime}`,
       priority: "normal",
       userId: user.id,
       position,
@@ -131,7 +130,7 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
     await supabase.from("notifications").insert({
       user_id: user.id,
       title: "Slot Booked",
-      message: `Slot booked for ${serviceName} on ${format(new Date(slot.slot_date), "EEE, MMM d")} at ${selectedTime}. Your ticket: ${ticketNumber}.`,
+      message: `Slot booked for ${serviceName} on ${format(new Date(slot.slot_date), "EEE, MMM d")} from ${startTime} to ${endTime}. Your ticket: ${ticketNumber}.`,
       ticket_id: ticketData.id,
     });
 
@@ -179,7 +178,7 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
               <Calendar
                 mode="single"
                 selected={selectedDate}
-                onSelect={(date) => { setSelectedDate(date); setSelectedTime(""); }}
+                onSelect={(date) => { setSelectedDate(date); setStartTime(""); setEndTime(""); }}
                 disabled={(date) => {
                   const dateStr = format(date, "yyyy-MM-dd");
                   return !availableDates.has(dateStr);
@@ -191,51 +190,61 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
           </Popover>
         </div>
 
-        {/* Step 2: Pick a time */}
+        {/* Step 2: Pick start and end time */}
         {selectedDate && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">2. Choose a time</p>
+          <div className="space-y-3">
+            <p className="text-sm font-medium">2. Choose your time slot</p>
 
-            {/* Show available time ranges as hint */}
             {availableRanges.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2">
-                <p className="text-xs text-muted-foreground w-full">Available time ranges:</p>
+              <div className="flex flex-wrap gap-2">
+                <p className="text-xs text-muted-foreground w-full">Available slots:</p>
                 {availableRanges.map((s) => {
                   const remaining = s.max_tokens - s.booked_count;
+                  const isSelected = startTime === s.slot_time?.slice(0, 5) && endTime === s.end_time?.slice(0, 5);
                   return (
-                    <Badge key={s.id} variant="outline" className="text-xs">
-                      {s.slot_time?.slice(0, 5)} – {s.end_time?.slice(0, 5) || "?"} ({remaining} spot{remaining !== 1 ? "s" : ""})
-                    </Badge>
+                    <button
+                      key={s.id}
+                      onClick={() => { setStartTime(s.slot_time?.slice(0, 5) || ""); setEndTime(s.end_time?.slice(0, 5) || ""); }}
+                      className={cn(
+                        "px-3 py-2 rounded-lg border-2 transition-all text-left",
+                        isSelected ? "border-primary bg-primary/5" : "border-border hover:border-primary/30"
+                      )}
+                    >
+                      <p className="text-sm font-medium">{s.slot_time?.slice(0, 5)} – {s.end_time?.slice(0, 5) || "?"}</p>
+                      <p className="text-xs text-muted-foreground">{remaining} spot{remaining !== 1 ? "s" : ""}</p>
+                    </button>
                   );
                 })}
               </div>
             )}
 
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <Clock className="h-5 w-5 text-primary" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Start Time</Label>
+                <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
               </div>
-              <Input
-                type="time"
-                value={selectedTime}
-                onChange={(e) => setSelectedTime(e.target.value)}
-                className="flex-1"
-              />
+              <div className="space-y-1">
+                <Label className="text-xs">End Time</Label>
+                <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+              </div>
             </div>
 
-            {selectedTime && !matchedSlot && (
-              <p className="text-xs text-destructive">No available slot at this time. Please choose a time within the available ranges above.</p>
+            {startTime && endTime && !matchedSlot && (
+              <p className="text-xs text-destructive">No available slot for {startTime} – {endTime}. Please select from the available slots above.</p>
             )}
 
-            {selectedTime && matchedSlot && (
+            {matchedSlot && (
               <div className="flex items-center justify-between p-3 rounded-lg border bg-primary/5 border-primary/20">
-                <div>
-                  <p className="text-sm font-medium">
-                    Slot: {matchedSlot.slot_time?.slice(0, 5)} – {matchedSlot.end_time?.slice(0, 5) || "?"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {matchedSlot.max_tokens - matchedSlot.booked_count} spot{matchedSlot.max_tokens - matchedSlot.booked_count !== 1 ? "s" : ""} available
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Clock className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{startTime} – {endTime}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {matchedSlot.max_tokens - matchedSlot.booked_count} spot{matchedSlot.max_tokens - matchedSlot.booked_count !== 1 ? "s" : ""} available
+                    </p>
+                  </div>
                 </div>
                 <Button size="sm" className="gradient-primary" onClick={bookSlot} disabled={loading}>
                   {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Book"}
