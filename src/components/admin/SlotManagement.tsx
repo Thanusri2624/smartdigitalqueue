@@ -62,6 +62,7 @@ export default function SlotManagement() {
     const { error } = await supabase.from("service_slots").update({
       slot_date: editForm.slot_date,
       slot_time: editForm.slot_time,
+      end_time: editForm.end_time,
       max_tokens: editForm.max_tokens,
       is_active: editForm.is_active,
     }).eq("id", editForm.id);
