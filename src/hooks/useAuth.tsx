@@ -6,6 +6,7 @@ interface AuthContextType {
   session: Session | null;
   user: User | null;
   isAdmin: boolean;
+  isStaff: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
 }
