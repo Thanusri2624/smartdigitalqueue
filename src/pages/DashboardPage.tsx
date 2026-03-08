@@ -319,7 +319,7 @@ export default function DashboardPage() {
                 <p className="font-medium text-sm mb-2">{svc.serviceName}</p>
                 <SlotBooking
                   serviceId={svc.serviceId}
-                  onSlotBooked={() => handleSlotBooked(svc.serviceId)}
+                  onSlotBooked={(_slotId, ticketId) => handleSlotBooked(svc.serviceId, ticketId)}
                 />
               </div>
             ))}
