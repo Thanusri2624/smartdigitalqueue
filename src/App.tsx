@@ -36,8 +36,8 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route element={<AppLayout />}>
-              <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-              <Route path="/join-queue" element={<ProtectedRoute><JoinQueuePage /></ProtectedRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute citizenOnly><DashboardPage /></ProtectedRoute>} />
+              <Route path="/join-queue" element={<ProtectedRoute citizenOnly><JoinQueuePage /></ProtectedRoute>} />
               <Route path="/ticket/:id" element={<ProtectedRoute><TicketDetailPage /></ProtectedRoute>} />
               <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
