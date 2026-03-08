@@ -319,6 +319,12 @@ export default function StaffDashboard() {
     toast.success(`${calledTicket.ticket.ticket_number} completed`);
     setCalledTicket(null);
     setLastNoShow(null);
+    setVerified(false);
+    setGraceTimeLeft(0);
+    if (graceTimerRef.current) {
+      clearInterval(graceTimerRef.current);
+      graceTimerRef.current = null;
+    }
   };
 
   const recallPrevious = async () => {
