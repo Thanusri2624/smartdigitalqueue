@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { CalendarDays, CalendarIcon, Clock, Loader2 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -19,8 +20,9 @@ interface Props {
 export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
   const { user } = useAuth();
   const [slots, setSlots] = useState<any[]>([]);
-  const [loading, setLoading] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedTime, setSelectedTime] = useState("");
 
   useEffect(() => {
     if (!serviceId) return;
@@ -45,8 +47,21 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
     return dates;
   }, [slots]);
 
-  // Filter slots for selected date
-  const filteredSlots = useMemo(() => {
+  // Find matching slot for selected date + time
+  const matchedSlot = useMemo(() => {
+    if (!selectedDate || !selectedTime) return null;
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    return slots.find(s => {
+      if (s.slot_date !== dateStr) return false;
+      const startTime = s.slot_time?.slice(0, 5);
+      const endTime = s.end_time?.slice(0, 5);
+      if (!startTime || !endTime) return selectedTime === startTime;
+      return selectedTime >= startTime && selectedTime < endTime;
+    }) || null;
+  }, [slots, selectedDate, selectedTime]);
+
+  // Available time ranges for selected date
+  const availableRanges = useMemo(() => {
     if (!selectedDate) return [];
     const dateStr = format(selectedDate, "yyyy-MM-dd");
     return slots.filter(s => s.slot_date === dateStr);
@@ -58,16 +73,17 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
     return `${prefix}-${num}`;
   };
 
-  const bookSlot = async (slot: any) => {
-    if (!user) return;
-    setLoading(slot.id);
+  const bookSlot = async () => {
+    if (!user || !matchedSlot) return;
+    setLoading(true);
+    const slot = matchedSlot;
 
     const { error: updateError } = await supabase
       .from("service_slots")
       .update({ booked_count: slot.booked_count + 1 })
       .eq("id", slot.id);
 
-    if (updateError) { toast.error(updateError.message); setLoading(null); return; }
+    if (updateError) { toast.error(updateError.message); setLoading(false); return; }
 
     const { data: svcData } = await supabase.from("services").select("name, estimated_time_minutes").eq("id", serviceId).single();
     const serviceName = svcData?.name || "Service";
@@ -101,7 +117,7 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
       status: "waiting",
     }).select().single();
 
-    if (ticketError) { toast.error(ticketError.message); setLoading(null); return; }
+    if (ticketError) { toast.error(ticketError.message); setLoading(false); return; }
 
     const { error: bookError } = await supabase.from("slot_bookings").insert({
       user_id: user.id,
@@ -110,18 +126,18 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
       ticket_id: ticketData.id,
     });
 
-    if (bookError) { toast.error(bookError.message); setLoading(null); return; }
+    if (bookError) { toast.error(bookError.message); setLoading(false); return; }
 
     await supabase.from("notifications").insert({
       user_id: user.id,
       title: "Slot Booked",
-      message: `Slot booked for ${serviceName} on ${format(new Date(slot.slot_date), "EEE, MMM d")} from ${slot.slot_time?.slice(0, 5)} to ${slot.end_time?.slice(0, 5) || "?"}. Your ticket: ${ticketNumber}.`,
+      message: `Slot booked for ${serviceName} on ${format(new Date(slot.slot_date), "EEE, MMM d")} at ${selectedTime}. Your ticket: ${ticketNumber}.`,
       ticket_id: ticketData.id,
     });
 
     toast.success(`Slot booked! Ticket: ${ticketNumber}`);
     onSlotBooked(slot.id, ticketData.id);
-    setLoading(null);
+    setLoading(false);
   };
 
   if (slots.length === 0) {
@@ -163,7 +179,7 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
               <Calendar
                 mode="single"
                 selected={selectedDate}
-                onSelect={setSelectedDate}
+                onSelect={(date) => { setSelectedDate(date); setSelectedTime(""); }}
                 disabled={(date) => {
                   const dateStr = format(date, "yyyy-MM-dd");
                   return !availableDates.has(dateStr);
@@ -175,39 +191,56 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
           </Popover>
         </div>
 
-        {/* Step 2: Pick a time slot */}
+        {/* Step 2: Pick a time */}
         {selectedDate && (
           <div className="space-y-2">
-            <p className="text-sm font-medium">2. Choose a time slot</p>
-            {filteredSlots.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-4">No slots available on this date</p>
-            ) : (
-              filteredSlots.map((slot) => {
-                const remaining = slot.max_tokens - slot.booked_count;
-                return (
-                  <div key={slot.id} className="flex items-center justify-between p-3 rounded-lg border bg-card">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Clock className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">
-                          {slot.slot_time?.slice(0, 5)} – {slot.end_time?.slice(0, 5) || "?"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{remaining} spot{remaining !== 1 ? "s" : ""} available</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={cn("text-xs", remaining <= 3 && "text-destructive border-destructive/30")}>
-                        {remaining}/{slot.max_tokens}
-                      </Badge>
-                      <Button size="sm" className="gradient-primary" onClick={() => bookSlot(slot)} disabled={loading === slot.id}>
-                        {loading === slot.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Book"}
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })
+            <p className="text-sm font-medium">2. Choose a time</p>
+
+            {/* Show available time ranges as hint */}
+            {availableRanges.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                <p className="text-xs text-muted-foreground w-full">Available time ranges:</p>
+                {availableRanges.map((s) => {
+                  const remaining = s.max_tokens - s.booked_count;
+                  return (
+                    <Badge key={s.id} variant="outline" className="text-xs">
+                      {s.slot_time?.slice(0, 5)} – {s.end_time?.slice(0, 5) || "?"} ({remaining} spot{remaining !== 1 ? "s" : ""})
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <Clock className="h-5 w-5 text-primary" />
+              </div>
+              <Input
+                type="time"
+                value={selectedTime}
+                onChange={(e) => setSelectedTime(e.target.value)}
+                className="flex-1"
+              />
+            </div>
+
+            {selectedTime && !matchedSlot && (
+              <p className="text-xs text-destructive">No available slot at this time. Please choose a time within the available ranges above.</p>
+            )}
+
+            {selectedTime && matchedSlot && (
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-primary/5 border-primary/20">
+                <div>
+                  <p className="text-sm font-medium">
+                    Slot: {matchedSlot.slot_time?.slice(0, 5)} – {matchedSlot.end_time?.slice(0, 5) || "?"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {matchedSlot.max_tokens - matchedSlot.booked_count} spot{matchedSlot.max_tokens - matchedSlot.booked_count !== 1 ? "s" : ""} available
+                  </p>
+                </div>
+                <Button size="sm" className="gradient-primary" onClick={bookSlot} disabled={loading}>
+                  {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Book"}
+                </Button>
+              </div>
             )}
           </div>
         )}
