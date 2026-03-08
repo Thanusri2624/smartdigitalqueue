@@ -5,10 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CalendarDays, CheckCircle, Clock, FileText, Plus, QrCode, Ticket, Users, XCircle } from "lucide-react";
+import { AlertCircle, CalendarDays, CheckCircle, Clock, FileText, Loader2, Plus, QrCode, Ticket, Users, XCircle } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import SlotBooking from "@/components/queue/SlotBooking";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 const priorityColors: Record<string, string> = {
   normal: "bg-primary/10 text-primary",
@@ -42,6 +43,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [servicesWithDocs, setServicesWithDocs] = useState<ServiceWithDocs[]>([]);
   const [slotBookedServices, setSlotBookedServices] = useState<Set<string>>(new Set());
+  const [slotBookings, setSlotBookings] = useState<any[]>([]);
+  const [cancellingBooking, setCancellingBooking] = useState<string | null>(null);
 
   const fetchTickets = async () => {
     if (!user) return;
@@ -85,13 +88,14 @@ export default function DashboardPage() {
       .select("*")
       .eq("user_id", user.id);
 
-    // Get user's existing slot bookings
+    // Get user's existing slot bookings with slot details
     const { data: bookings } = await supabase
       .from("slot_bookings")
-      .select("*, service_slots(service_id)")
+      .select("*, service_slots(service_id, slot_date, slot_time, booked_count)")
       .eq("user_id", user.id)
       .eq("status", "booked");
 
+    setSlotBookings(bookings || []);
     const bookedServiceIds = new Set(
       (bookings || []).map((b: any) => b.service_slots?.service_id).filter(Boolean)
     );
@@ -142,6 +146,36 @@ export default function DashboardPage() {
     setSlotBookedServices(prev => new Set([...prev, serviceId]));
     toast.success("Slot booked! Check your active tickets.");
     fetchTickets();
+    fetchServicesForBooking();
+  };
+
+  const handleCancelBooking = async (booking: any) => {
+    if (!user) return;
+    setCancellingBooking(booking.id);
+
+    try {
+      // Cancel the slot booking
+      await supabase.from("slot_bookings").update({ status: "cancelled" }).eq("id", booking.id);
+
+      // Decrement booked_count on the slot
+      if (booking.service_slots?.booked_count > 0) {
+        await supabase.from("service_slots").update({ 
+          booked_count: booking.service_slots.booked_count - 1 
+        }).eq("id", booking.slot_id);
+      }
+
+      // Cancel associated ticket if exists
+      if (booking.ticket_id) {
+        await supabase.from("queue_tickets").update({ status: "cancelled" }).eq("id", booking.ticket_id);
+      }
+
+      toast.success("Slot booking cancelled");
+      fetchTickets();
+      fetchServicesForBooking();
+    } catch (err) {
+      toast.error("Failed to cancel booking");
+    }
+    setCancellingBooking(null);
   };
 
   return (
@@ -294,22 +328,52 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Already booked services */}
-      {slotBookedServices.size > 0 && servicesWithDocs.filter(s => slotBookedServices.has(s.serviceId)).length > 0 && (
+      {/* Active Slot Bookings with cancel option */}
+      {slotBookings.length > 0 && (
         <div className="mb-8">
-          <Card className="shadow-card border-0">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <CalendarDays className="h-4 w-4 text-success" />
-                <p className="font-medium text-sm text-success">Slots Booked</p>
-              </div>
-              <div className="space-y-1">
-                {servicesWithDocs.filter(s => slotBookedServices.has(s.serviceId)).map(svc => (
-                  <p key={svc.serviceId} className="text-xs text-muted-foreground">• {svc.serviceName}</p>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <h2 className="text-xl font-display font-semibold mb-4 flex items-center gap-2">
+            <CalendarDays className="h-5 w-5" /> Your Slot Bookings
+          </h2>
+          <div className="space-y-3">
+            {slotBookings.map(booking => {
+              const svc = servicesWithDocs.find(s => s.serviceId === booking.service_slots?.service_id);
+              return (
+                <Card key={booking.id} className="shadow-card border-0">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <CalendarDays className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{svc?.serviceName || "Service"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {booking.service_slots?.slot_date && format(new Date(booking.service_slots.slot_date), "EEE, MMM d")}
+                          {" at "}
+                          {booking.service_slots?.slot_time?.slice(0, 5)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-success/10 text-success">Booked</Badge>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-destructive hover:text-destructive gap-1"
+                        disabled={cancellingBooking === booking.id}
+                        onClick={() => handleCancelBooking(booking)}
+                      >
+                        {cancellingBooking === booking.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <><XCircle className="h-3 w-3" /> Cancel</>
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </div>
       )}
 
