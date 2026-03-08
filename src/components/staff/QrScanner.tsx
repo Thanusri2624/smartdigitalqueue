@@ -105,6 +105,48 @@ export default function QrScanner() {
     }
   };
 
+  const handleManualSearch = async () => {
+    if (!manualTicket.trim()) return;
+    setSearching(true);
+    const { data: ticket } = await supabase
+      .from("queue_tickets")
+      .select("*, services(name)")
+      .eq("ticket_number", manualTicket.trim().toUpperCase())
+      .single();
+
+    if (!ticket) {
+      toast.error("Ticket not found");
+      setSearching(false);
+      return;
+    }
+
+    let userName = "—";
+    if (ticket.user_id) {
+      const { data: profile } = await supabase.from("profiles").select("full_name").eq("user_id", ticket.user_id).single();
+      if (profile) userName = profile.full_name || "—";
+    }
+
+    setScannedTicket({
+      id: ticket.id,
+      ticket_number: ticket.ticket_number,
+      status: ticket.status,
+      priority: ticket.priority,
+      service_name: (ticket.services as any)?.name || "—",
+      user_name: userName,
+    });
+
+    if (user) {
+      await supabase.from("staff_activity_logs").insert({
+        staff_id: user.id,
+        action: "manual_lookup",
+        ticket_id: ticket.id,
+        details: { ticket_number: ticket.ticket_number, message: `Manual lookup for ${ticket.ticket_number}` },
+      });
+    }
+    setManualTicket("");
+    setSearching(false);
+  };
+
   const markServed = async () => {
     if (!scannedTicket || !user) return;
     const { error } = await supabase.from("queue_tickets").update({
