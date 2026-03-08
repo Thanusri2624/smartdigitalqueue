@@ -138,11 +138,11 @@ export default function StaffDashboard() {
     let isPregnant = false;
     let isDisabled = false;
     if (ticket.user_id) {
-      const { data: profile } = await supabase
+      const { data: profiles } = await supabase
         .from("profiles")
         .select("full_name, phone, date_of_birth, is_pregnant, is_disabled")
-        .eq("user_id", ticket.user_id)
-        .single();
+        .eq("user_id", ticket.user_id);
+      const profile = profiles?.[0] || null;
       if (profile) {
         userName = profile.full_name || "—";
         userPhone = profile.phone;
@@ -246,11 +246,11 @@ export default function StaffDashboard() {
     let isPregnant = false;
     let isDisabled = false;
     if (ticket.user_id) {
-      const { data: profile } = await supabase
+      const { data: profiles } = await supabase
         .from("profiles")
         .select("full_name, phone, date_of_birth, is_pregnant, is_disabled")
-        .eq("user_id", ticket.user_id)
-        .single();
+        .eq("user_id", ticket.user_id);
+      const profile = profiles?.[0] || null;
       if (profile) {
         userName = profile.full_name || "—";
         userPhone = profile.phone;
