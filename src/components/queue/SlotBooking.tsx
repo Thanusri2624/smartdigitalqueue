@@ -1,12 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { CalendarDays, Clock, Loader2 } from "lucide-react";
-import { format } from "date-fns";
+import { CalendarDays, CalendarIcon, Clock, Loader2 } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface Props {
   serviceId: string;
@@ -17,6 +20,7 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
   const { user } = useAuth();
   const [slots, setSlots] = useState<any[]>([]);
   const [loading, setLoading] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     if (!serviceId) return;
@@ -34,6 +38,20 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
       });
   }, [serviceId]);
 
+  // Dates that have available slots
+  const availableDates = useMemo(() => {
+    const dates = new Set<string>();
+    slots.forEach(s => dates.add(s.slot_date));
+    return dates;
+  }, [slots]);
+
+  // Filter slots for selected date
+  const filteredSlots = useMemo(() => {
+    if (!selectedDate) return [];
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    return slots.filter(s => s.slot_date === dateStr);
+  }, [slots, selectedDate]);
+
   const generateTicketNumber = () => {
     const prefix = "SQ";
     const num = Math.floor(1000 + Math.random() * 9000);
@@ -44,7 +62,6 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
     if (!user) return;
     setLoading(slot.id);
 
-    // Increment booked count
     const { error: updateError } = await supabase
       .from("service_slots")
       .update({ booked_count: slot.booked_count + 1 })
@@ -52,18 +69,15 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
 
     if (updateError) { toast.error(updateError.message); setLoading(null); return; }
 
-    // Fetch service name for QR code
     const { data: svcData } = await supabase.from("services").select("name, estimated_time_minutes").eq("id", serviceId).single();
     const serviceName = svcData?.name || "Service";
 
-    // Calculate correct position based on waiting tickets for this service
     const { count: waitingCount } = await supabase
       .from("queue_tickets")
       .select("*", { count: "exact", head: true })
       .eq("service_id", serviceId)
       .eq("status", "waiting");
 
-    // Generate queue ticket for this slot
     const ticketNumber = generateTicketNumber();
     const position = (waitingCount || 0) + 1;
     const qrData = JSON.stringify({
@@ -89,7 +103,6 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
 
     if (ticketError) { toast.error(ticketError.message); setLoading(null); return; }
 
-    // Create slot booking linked to ticket
     const { error: bookError } = await supabase.from("slot_bookings").insert({
       user_id: user.id,
       slot_id: slot.id,
@@ -99,7 +112,6 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
 
     if (bookError) { toast.error(bookError.message); setLoading(null); return; }
 
-    // Send notification
     await supabase.from("notifications").insert({
       user_id: user.id,
       title: "Slot Booked",
@@ -130,31 +142,75 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
           <CalendarDays className="h-5 w-5" /> Book a Slot
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
-        {slots.map((slot) => {
-          const remaining = slot.max_tokens - slot.booked_count;
-          return (
-            <div key={slot.id} className="flex items-center justify-between p-3 rounded-lg border bg-card">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Clock className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">{format(new Date(slot.slot_date), "EEE, MMM d")}</p>
-                  <p className="text-xs text-muted-foreground">{slot.slot_time?.slice(0, 5)} – {slot.end_time?.slice(0, 5) || "?"}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className={`text-xs ${remaining <= 3 ? "text-destructive" : ""}`}>
-                  {remaining} left
-                </Badge>
-                <Button size="sm" className="gradient-primary" onClick={() => bookSlot(slot)} disabled={loading === slot.id}>
-                  {loading === slot.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Book"}
-                </Button>
-              </div>
-            </div>
-          );
-        })}
+      <CardContent className="space-y-4">
+        {/* Step 1: Pick a date */}
+        <div className="space-y-2">
+          <p className="text-sm font-medium">1. Choose a date</p>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !selectedDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {selectedDate ? format(selectedDate, "EEE, MMM d, yyyy") : "Pick a date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={setSelectedDate}
+                disabled={(date) => {
+                  const dateStr = format(date, "yyyy-MM-dd");
+                  return !availableDates.has(dateStr);
+                }}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        {/* Step 2: Pick a time slot */}
+        {selectedDate && (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">2. Choose a time slot</p>
+            {filteredSlots.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">No slots available on this date</p>
+            ) : (
+              filteredSlots.map((slot) => {
+                const remaining = slot.max_tokens - slot.booked_count;
+                return (
+                  <div key={slot.id} className="flex items-center justify-between p-3 rounded-lg border bg-card">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Clock className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">
+                          {slot.slot_time?.slice(0, 5)} – {slot.end_time?.slice(0, 5) || "?"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{remaining} spot{remaining !== 1 ? "s" : ""} available</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={cn("text-xs", remaining <= 3 && "text-destructive border-destructive/30")}>
+                        {remaining}/{slot.max_tokens}
+                      </Badge>
+                      <Button size="sm" className="gradient-primary" onClick={() => bookSlot(slot)} disabled={loading === slot.id}>
+                        {loading === slot.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Book"}
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
