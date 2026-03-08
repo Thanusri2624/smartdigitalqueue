@@ -22,6 +22,8 @@ export default function QrScanner() {
   const { user } = useAuth();
   const [scanning, setScanning] = useState(false);
   const [scannedTicket, setScannedTicket] = useState<ScannedTicket | null>(null);
+  const [manualTicket, setManualTicket] = useState("");
+  const [searching, setSearching] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const containerId = "qr-reader";
 
