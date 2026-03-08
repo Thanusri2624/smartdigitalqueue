@@ -81,14 +81,38 @@ export default function StaffDashboard() {
   // Auto-call flag to trigger next call after completion/no-show
   const autoCallNextRef = useRef(false);
 
+  const [assignedServiceIds, setAssignedServiceIds] = useState<string[] | null>(null);
+
   const fetchAll = async () => {
     const [t, s] = await Promise.all([
       supabase.from("queue_tickets").select("*").in("status", ["waiting", "called", "serving"]).order("created_at"),
       supabase.from("services").select("*"),
     ]);
+
+    // Fetch staff's assigned services
+    let assignedIds: string[] | null = null;
+    if (user) {
+      const { data: staffSvcs } = await supabase
+        .from("staff_services")
+        .select("service_id")
+        .eq("staff_id", user.id);
+      if (staffSvcs && staffSvcs.length > 0) {
+        assignedIds = staffSvcs.map(ss => ss.service_id);
+        setAssignedServiceIds(assignedIds);
+      } else {
+        // No assignments = show all (backward compat)
+        setAssignedServiceIds(null);
+      }
+    }
+
+    const allServices = s.data || [];
+    const filteredServices = assignedIds
+      ? allServices.filter(svc => assignedIds.includes(svc.id))
+      : allServices;
+
     setTickets(t.data || []);
-    setServices(s.data || []);
-    return { tickets: t.data || [], services: s.data || [] };
+    setServices(filteredServices);
+    return { tickets: t.data || [], services: filteredServices };
   };
 
   const fetchDocuments = async () => {
