@@ -43,6 +43,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [servicesWithDocs, setServicesWithDocs] = useState<ServiceWithDocs[]>([]);
   const [slotBookedServices, setSlotBookedServices] = useState<Set<string>>(new Set());
+  const [slotBookings, setSlotBookings] = useState<any[]>([]);
+  const [cancellingBooking, setCancellingBooking] = useState<string | null>(null);
 
   const fetchTickets = async () => {
     if (!user) return;
