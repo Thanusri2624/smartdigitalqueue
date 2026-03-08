@@ -101,7 +101,7 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
     });
 
     toast.success(`Slot booked! Ticket: ${ticketNumber}`);
-    onSlotBooked(slot.id);
+    onSlotBooked(slot.id, ticketData.id);
     setLoading(null);
   };
 
