@@ -118,7 +118,7 @@ export default function StaffDashboard() {
         handleAutoNoShow();
       }
     }
-  }, [graceTimeLeft, verified]);
+  }, [graceTimeLeft, verified, calledTicket]);
 
   const startGraceTimer = () => {
     setGraceTimeLeft(GRACE_PERIOD_SECONDS);
