@@ -57,15 +57,47 @@ export default function TicketDetailPage() {
 
   const handleCancel = async () => {
     if (!ticket) return;
+    
+    // Cancel the ticket
     const { error } = await supabase
       .from("queue_tickets")
       .update({ status: "cancelled" })
       .eq("id", ticket.id);
     if (error) {
       toast.error("Failed to cancel");
-    } else {
-      toast.success("Ticket cancelled");
+      return;
     }
+
+    // Cancel associated slot booking and decrement booked_count
+    const { data: booking } = await supabase
+      .from("slot_bookings")
+      .select("id, slot_id")
+      .eq("ticket_id", ticket.id)
+      .eq("status", "booked")
+      .maybeSingle();
+
+    if (booking) {
+      await supabase
+        .from("slot_bookings")
+        .update({ status: "cancelled" })
+        .eq("id", booking.id);
+
+      // Decrement booked_count on the slot
+      const { data: slot } = await supabase
+        .from("service_slots")
+        .select("booked_count")
+        .eq("id", booking.slot_id)
+        .single();
+
+      if (slot && slot.booked_count > 0) {
+        await supabase
+          .from("service_slots")
+          .update({ booked_count: slot.booked_count - 1 })
+          .eq("id", booking.slot_id);
+      }
+    }
+
+    toast.success("Ticket cancelled");
   };
 
   if (loading) {
