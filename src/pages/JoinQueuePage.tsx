@@ -160,9 +160,22 @@ export default function JoinQueuePage() {
         </CardContent>
       </Card>
 
-      {/* Required Documents */}
+      {/* Required Documents - always show when service has required docs */}
       {selectedService && requiredDocs.length > 0 && (
         <div className="mb-6">
+          <Card className="shadow-elevated border-0 mb-4">
+            <CardContent className="p-4">
+              <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                Documents required for {selectedSvc?.name}
+              </p>
+              <ul className="list-disc list-inside space-y-1">
+                {requiredDocs.map((doc) => (
+                  <li key={doc} className="text-sm text-muted-foreground">{doc}</li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
           <DocumentUpload serviceId={selectedService} requiredDocuments={requiredDocs} onAllUploaded={handleDocsUploaded} />
         </div>
       )}
