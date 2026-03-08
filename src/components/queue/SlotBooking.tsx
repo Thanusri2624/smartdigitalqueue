@@ -141,7 +141,7 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
                 </div>
                 <div>
                   <p className="text-sm font-medium">{format(new Date(slot.slot_date), "EEE, MMM d")}</p>
-                  <p className="text-xs text-muted-foreground">{slot.slot_time?.slice(0, 5)}</p>
+                  <p className="text-xs text-muted-foreground">{slot.slot_time?.slice(0, 5)} – {slot.end_time?.slice(0, 5) || "?"}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
