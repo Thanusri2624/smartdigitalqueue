@@ -1,0 +1,1 @@
+ALTER TABLE public.service_slots ADD COLUMN end_time time without time zone;
