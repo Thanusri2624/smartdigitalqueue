@@ -49,6 +49,63 @@ export type Database = {
           },
         ]
       }
+      document_uploads: {
+        Row: {
+          created_at: string
+          document_name: string
+          file_path: string
+          id: string
+          notes: string | null
+          service_id: string
+          status: string
+          ticket_id: string | null
+          updated_at: string
+          user_id: string
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_name: string
+          file_path: string
+          id?: string
+          notes?: string | null
+          service_id: string
+          status?: string
+          ticket_id?: string | null
+          updated_at?: string
+          user_id: string
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_name?: string
+          file_path?: string
+          id?: string
+          notes?: string | null
+          service_id?: string
+          status?: string
+          ticket_id?: string | null
+          updated_at?: string
+          user_id?: string
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_uploads_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_uploads_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "queue_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -195,6 +252,50 @@ export type Database = {
           },
         ]
       }
+      service_slots: {
+        Row: {
+          booked_count: number
+          created_at: string
+          id: string
+          is_active: boolean
+          max_tokens: number
+          service_id: string
+          slot_date: string
+          slot_time: string
+          updated_at: string
+        }
+        Insert: {
+          booked_count?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_tokens?: number
+          service_id: string
+          slot_date: string
+          slot_time: string
+          updated_at?: string
+        }
+        Update: {
+          booked_count?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_tokens?: number
+          service_id?: string
+          slot_date?: string
+          slot_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_slots_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           created_at: string
@@ -202,7 +303,10 @@ export type Database = {
           estimated_time_minutes: number
           id: string
           is_active: boolean
+          max_queue_capacity: number | null
           name: string
+          required_documents: Json | null
+          slots_enabled: boolean | null
           updated_at: string
         }
         Insert: {
@@ -211,7 +315,10 @@ export type Database = {
           estimated_time_minutes?: number
           id?: string
           is_active?: boolean
+          max_queue_capacity?: number | null
           name: string
+          required_documents?: Json | null
+          slots_enabled?: boolean | null
           updated_at?: string
         }
         Update: {
@@ -220,10 +327,90 @@ export type Database = {
           estimated_time_minutes?: number
           id?: string
           is_active?: boolean
+          max_queue_capacity?: number | null
           name?: string
+          required_documents?: Json | null
+          slots_enabled?: boolean | null
           updated_at?: string
         }
         Relationships: []
+      }
+      slot_bookings: {
+        Row: {
+          created_at: string
+          id: string
+          slot_id: string
+          status: string
+          ticket_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          slot_id: string
+          status?: string
+          ticket_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          slot_id?: string
+          status?: string
+          ticket_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slot_bookings_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "service_slots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "slot_bookings_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "queue_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_activity_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          staff_id: string
+          ticket_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          staff_id: string
+          ticket_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          staff_id?: string
+          ticket_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_activity_logs_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "queue_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
