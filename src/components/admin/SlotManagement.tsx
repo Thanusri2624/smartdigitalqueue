@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { CalendarDays, Edit2, Loader2, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
-const emptyForm = { service_id: "", slot_date: "", slot_time: "", max_tokens: 10 };
+const emptyForm = { service_id: "", slot_date: "", slot_time: "", end_time: "", max_tokens: 10 };
 
 export default function SlotManagement() {
   const [services, setServices] = useState<any[]>([]);
@@ -40,10 +40,15 @@ export default function SlotManagement() {
       return;
     }
     setLoading(true);
+    if (!form.end_time) {
+      toast.error("All fields are required");
+      return;
+    }
     const { error } = await supabase.from("service_slots").insert({
       service_id: form.service_id,
       slot_date: form.slot_date,
       slot_time: form.slot_time,
+      end_time: form.end_time,
       max_tokens: form.max_tokens,
     });
     if (error) toast.error(error.message);
@@ -57,6 +62,7 @@ export default function SlotManagement() {
     const { error } = await supabase.from("service_slots").update({
       slot_date: editForm.slot_date,
       slot_time: editForm.slot_time,
+      end_time: editForm.end_time,
       max_tokens: editForm.max_tokens,
       is_active: editForm.is_active,
     }).eq("id", editForm.id);
@@ -70,6 +76,7 @@ export default function SlotManagement() {
       id: slot.id,
       slot_date: slot.slot_date,
       slot_time: slot.slot_time?.slice(0, 5),
+      end_time: slot.end_time?.slice(0, 5) || "",
       max_tokens: slot.max_tokens,
       is_active: slot.is_active,
       booked_count: slot.booked_count,
@@ -104,14 +111,18 @@ export default function SlotManagement() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Date</Label>
                   <Input type="date" value={form.slot_date} onChange={(e) => setForm(f => ({ ...f, slot_date: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Time</Label>
+                  <Label>Start Time</Label>
                   <Input type="time" value={form.slot_time} onChange={(e) => setForm(f => ({ ...f, slot_time: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>End Time</Label>
+                  <Input type="time" value={form.end_time} onChange={(e) => setForm(f => ({ ...f, end_time: e.target.value }))} />
                 </div>
               </div>
               <div className="space-y-2">
@@ -132,14 +143,18 @@ export default function SlotManagement() {
           <DialogHeader><DialogTitle className="font-display">Edit Slot — {editForm?.service_name}</DialogTitle></DialogHeader>
           {editForm && (
             <div className="space-y-4 mt-2">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Date</Label>
                   <Input type="date" value={editForm.slot_date} onChange={(e) => setEditForm((f: any) => ({ ...f, slot_date: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Time</Label>
+                  <Label>Start Time</Label>
                   <Input type="time" value={editForm.slot_time} onChange={(e) => setEditForm((f: any) => ({ ...f, slot_time: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>End Time</Label>
+                  <Input type="time" value={editForm.end_time} onChange={(e) => setEditForm((f: any) => ({ ...f, end_time: e.target.value }))} />
                 </div>
               </div>
               <div className="space-y-2">
@@ -177,7 +192,7 @@ export default function SlotManagement() {
                 <div>
                   <p className="font-medium text-sm">{(slot.services as any)?.name || "—"}</p>
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(slot.slot_date), "MMM d, yyyy")} at {slot.slot_time?.slice(0, 5)}
+                    {format(new Date(slot.slot_date), "MMM d, yyyy")} · {slot.slot_time?.slice(0, 5)} – {slot.end_time?.slice(0, 5) || "?"}
                   </p>
                 </div>
               </div>

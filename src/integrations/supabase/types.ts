@@ -256,6 +256,7 @@ export type Database = {
         Row: {
           booked_count: number
           created_at: string
+          end_time: string | null
           id: string
           is_active: boolean
           max_tokens: number
@@ -267,6 +268,7 @@ export type Database = {
         Insert: {
           booked_count?: number
           created_at?: string
+          end_time?: string | null
           id?: string
           is_active?: boolean
           max_tokens?: number
@@ -278,6 +280,7 @@ export type Database = {
         Update: {
           booked_count?: number
           created_at?: string
+          end_time?: string | null
           id?: string
           is_active?: boolean
           max_tokens?: number

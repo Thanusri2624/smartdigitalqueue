@@ -70,7 +70,7 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
       ticket: ticketNumber,
       service: serviceName,
       slot_date: slot.slot_date,
-      slot_time: slot.slot_time,
+      slot_time: `${slot.slot_time?.slice(0, 5)} - ${slot.end_time?.slice(0, 5) || "?"}`,
       priority: "normal",
       userId: user.id,
       position,
@@ -103,7 +103,7 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
     await supabase.from("notifications").insert({
       user_id: user.id,
       title: "Slot Booked",
-      message: `Slot booked for ${serviceName} on ${format(new Date(slot.slot_date), "EEE, MMM d")} at ${slot.slot_time?.slice(0, 5)}. Your ticket: ${ticketNumber}.`,
+      message: `Slot booked for ${serviceName} on ${format(new Date(slot.slot_date), "EEE, MMM d")} from ${slot.slot_time?.slice(0, 5)} to ${slot.end_time?.slice(0, 5) || "?"}. Your ticket: ${ticketNumber}.`,
       ticket_id: ticketData.id,
     });
 
@@ -141,7 +141,7 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
                 </div>
                 <div>
                   <p className="text-sm font-medium">{format(new Date(slot.slot_date), "EEE, MMM d")}</p>
-                  <p className="text-xs text-muted-foreground">{slot.slot_time?.slice(0, 5)}</p>
+                  <p className="text-xs text-muted-foreground">{slot.slot_time?.slice(0, 5)} – {slot.end_time?.slice(0, 5) || "?"}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
