@@ -97,8 +97,95 @@ export default function StaffDashboard() {
     setDocuments(data || []);
   };
 
+  // Restore active ticket on load
+  const restoreActiveTicket = async (ticketsList: Tables<"queue_tickets">[], servicesList: Tables<"services">[]) => {
+    if (calledTicket) return; // Already have one
+    
+    // Find a ticket that's currently being served or called
+    const serving = ticketsList.find(t => t.status === "serving");
+    const called = ticketsList.find(t => t.status === "called");
+    const active = serving || called;
+    
+    if (active) {
+      const details = await fetchTicketDetailsWithServices(active, servicesList);
+      setCalledTicket(details);
+      if (active.status === "called") {
+        // Resume grace timer with remaining time
+        const calledTime = active.called_at ? new Date(active.called_at).getTime() : Date.now();
+        const elapsed = Math.floor((Date.now() - calledTime) / 1000);
+        const remaining = Math.max(0, GRACE_PERIOD_SECONDS - elapsed);
+        if (remaining > 0) {
+          setGraceTimeLeft(remaining);
+          setVerified(false);
+          if (graceTimerRef.current) clearInterval(graceTimerRef.current);
+          graceTimerRef.current = setInterval(() => {
+            setGraceTimeLeft(prev => prev <= 1 ? 0 : prev - 1);
+          }, 1000);
+        }
+      } else {
+        setVerified(true);
+      }
+    }
+  };
+
+  // Separate fetchTicketDetails that accepts services list (for init before state is set)
+  const fetchTicketDetailsWithServices = async (ticket: Tables<"queue_tickets">, servicesList: Tables<"services">[]): Promise<CalledTicketDetails> => {
+    const svc = servicesList.find(s => s.id === ticket.service_id);
+
+    let userName = "—";
+    let userPhone: string | null = null;
+    let userDob: string | null = null;
+    let isPregnant = false;
+    let isDisabled = false;
+    if (ticket.user_id) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, phone, date_of_birth, is_pregnant, is_disabled")
+        .eq("user_id", ticket.user_id)
+        .single();
+      if (profile) {
+        userName = profile.full_name || "—";
+        userPhone = profile.phone;
+        userDob = profile.date_of_birth;
+        isPregnant = profile.is_pregnant;
+        isDisabled = profile.is_disabled;
+      }
+    }
+
+    let docs: { id: string; document_name: string; status: string }[] = [];
+    if (ticket.user_id) {
+      const { data: d } = await supabase
+        .from("document_uploads")
+        .select("id, document_name, status")
+        .eq("user_id", ticket.user_id)
+        .eq("service_id", ticket.service_id);
+      docs = d || [];
+    }
+
+    return {
+      ticket,
+      serviceName: svc?.name || "—",
+      serviceDescription: svc?.description || "",
+      userName,
+      userPhone,
+      userDob,
+      isPregnant,
+      isDisabled,
+      documents: docs,
+    };
+  };
+
   useEffect(() => {
-    fetchAll();
+    const init = async () => {
+      const [t, s] = await Promise.all([
+        supabase.from("queue_tickets").select("*").in("status", ["waiting", "called", "serving"]).order("created_at"),
+        supabase.from("services").select("*"),
+      ]);
+      setTickets(t.data || []);
+      setServices(s.data || []);
+      await restoreActiveTicket(t.data || [], s.data || []);
+    };
+    init();
     fetchDocuments();
     const channel = supabase
       .channel("staff-tickets")
