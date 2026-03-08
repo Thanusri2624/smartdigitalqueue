@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Camera, CameraOff, CheckCircle, XCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Camera, CameraOff, CheckCircle, Search, XCircle } from "lucide-react";
 
 interface ScannedTicket {
   id: string;
