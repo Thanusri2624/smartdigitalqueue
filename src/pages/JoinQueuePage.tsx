@@ -160,9 +160,22 @@ export default function JoinQueuePage() {
         </CardContent>
       </Card>
 
-      {/* Required Documents */}
+      {/* Required Documents - always show when service has required docs */}
       {selectedService && requiredDocs.length > 0 && (
         <div className="mb-6">
+          <Card className="shadow-elevated border-0 mb-4">
+            <CardContent className="p-4">
+              <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                Documents required for {selectedSvc?.name}
+              </p>
+              <ul className="list-disc list-inside space-y-1">
+                {requiredDocs.map((doc) => (
+                  <li key={doc} className="text-sm text-muted-foreground">{doc}</li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
           <DocumentUpload serviceId={selectedService} requiredDocuments={requiredDocs} onAllUploaded={handleDocsUploaded} />
         </div>
       )}
@@ -197,7 +210,17 @@ export default function JoinQueuePage() {
       {/* Slot Booking */}
       {selectedService && mode === "slot" && slotsEnabled && (
         <div className="mb-6">
-          <SlotBooking serviceId={selectedService} onSlotBooked={() => { setSlotBooked(true); toast.success("Slot booked! You can also join the live queue."); }} />
+          {requiredDocs.length > 0 && !docsUploaded ? (
+            <Card className="shadow-elevated border-0">
+              <CardContent className="p-6 text-center space-y-2">
+                <AlertTriangle className="h-8 w-8 text-warning mx-auto" />
+                <p className="font-medium text-sm">Upload Required Documents First</p>
+                <p className="text-xs text-muted-foreground">You must upload all required documents before booking a slot.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <SlotBooking serviceId={selectedService} onSlotBooked={() => { setSlotBooked(true); toast.success("Slot booked! You can also join the live queue."); }} />
+          )}
         </div>
       )}
 
