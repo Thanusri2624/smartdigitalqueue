@@ -197,7 +197,17 @@ export default function JoinQueuePage() {
       {/* Slot Booking */}
       {selectedService && mode === "slot" && slotsEnabled && (
         <div className="mb-6">
-          <SlotBooking serviceId={selectedService} onSlotBooked={() => { setSlotBooked(true); toast.success("Slot booked! You can also join the live queue."); }} />
+          {requiredDocs.length > 0 && !docsUploaded ? (
+            <Card className="shadow-elevated border-0">
+              <CardContent className="p-6 text-center space-y-2">
+                <AlertTriangle className="h-8 w-8 text-warning mx-auto" />
+                <p className="font-medium text-sm">Upload Required Documents First</p>
+                <p className="text-xs text-muted-foreground">You must upload all required documents before booking a slot.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <SlotBooking serviceId={selectedService} onSlotBooked={() => { setSlotBooked(true); toast.success("Slot booked! You can also join the live queue."); }} />
+          )}
         </div>
       )}
 
