@@ -193,6 +193,20 @@ export default function QrScanner() {
               </Button>
             )}
           </div>
+          <div className="border-t pt-4">
+            <p className="text-sm font-medium mb-2">Or search by ticket number</p>
+            <div className="flex gap-2">
+              <Input
+                placeholder="e.g. SQ-1234"
+                value={manualTicket}
+                onChange={(e) => setManualTicket(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleManualSearch()}
+              />
+              <Button onClick={handleManualSearch} disabled={searching} variant="outline" className="gap-1">
+                <Search className="h-4 w-4" /> Search
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
