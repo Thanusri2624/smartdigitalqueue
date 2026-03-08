@@ -192,7 +192,9 @@ export default function SlotManagement() {
                 <div>
                   <p className="font-medium text-sm">{(slot.services as any)?.name || "—"}</p>
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(slot.slot_date), "MMM d, yyyy")} at {slot.slot_time?.slice(0, 5)}
+                    {format(new Date(slot.slot_date), "MMM d, yyyy")} · {slot.slot_time?.slice(0, 5)} – {slot.end_time?.slice(0, 5) || "?"}
+                  </p>
+                </div>
                   </p>
                 </div>
               </div>
