@@ -155,6 +155,7 @@ export default function AdminDashboard() {
           <TabsTrigger value="documents"><FileCheck className="h-4 w-4 mr-1" />Documents</TabsTrigger>
           <TabsTrigger value="counters">Counters</TabsTrigger>
           <TabsTrigger value="activity">Staff Activity</TabsTrigger>
+          <TabsTrigger value="users"><Users className="h-4 w-4 mr-1" />Users</TabsTrigger>
         </TabsList>
 
         <TabsContent value="queue" className="space-y-4">
