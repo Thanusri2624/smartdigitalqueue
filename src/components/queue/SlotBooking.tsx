@@ -70,7 +70,7 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
       ticket: ticketNumber,
       service: serviceName,
       slot_date: slot.slot_date,
-      slot_time: slot.slot_time,
+      slot_time: `${slot.slot_time?.slice(0, 5)} - ${slot.end_time?.slice(0, 5) || "?"}`,
       priority: "normal",
       userId: user.id,
       position,
