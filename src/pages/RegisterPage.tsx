@@ -51,14 +51,13 @@ export default function RegisterPage() {
         emailRedirectTo: window.location.origin,
       },
     });
-    
+
     if (error) {
       toast.error(error.message);
       setLoading(false);
       return;
     }
 
-    // Update profile with additional data
     if (data.user) {
       await supabase.from("profiles").update({
         phone: formData.phone || null,
@@ -80,7 +79,7 @@ export default function RegisterPage() {
           <div className="mx-auto mb-4 w-14 h-14 rounded-xl gradient-primary flex items-center justify-center">
             <UserPlus className="h-7 w-7 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl font-display">Create Account</CardTitle>
+          <CardTitle className="text-2xl font-display">Create Citizen Account</CardTitle>
           <CardDescription>Join Smart Queue to skip the wait</CardDescription>
         </CardHeader>
         <form onSubmit={handleRegister}>
@@ -134,6 +133,14 @@ export default function RegisterPage() {
               Already have an account?{" "}
               <Link to="/login" className="text-primary hover:underline font-medium">Sign in</Link>
             </p>
+            <div className="w-full border-t pt-4">
+              <p className="text-xs text-muted-foreground text-center">
+                Staff or Admin?{" "}
+                <Link to="/login/staff" className="text-primary hover:underline">Staff Login</Link>
+                {" · "}
+                <Link to="/login/admin" className="text-primary hover:underline">Admin Login</Link>
+              </p>
+            </div>
           </CardFooter>
         </form>
       </Card>
