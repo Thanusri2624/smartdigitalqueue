@@ -5,10 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CalendarDays, CheckCircle, Clock, FileText, Plus, QrCode, Ticket, Users, XCircle } from "lucide-react";
+import { AlertCircle, CalendarDays, CheckCircle, Clock, FileText, Loader2, Plus, QrCode, Ticket, Users, XCircle } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import SlotBooking from "@/components/queue/SlotBooking";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 const priorityColors: Record<string, string> = {
   normal: "bg-primary/10 text-primary",
