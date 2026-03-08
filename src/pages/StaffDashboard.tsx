@@ -118,7 +118,7 @@ export default function StaffDashboard() {
         handleAutoNoShow();
       }
     }
-  }, [graceTimeLeft, verified]);
+  }, [graceTimeLeft, verified, calledTicket]);
 
   const startGraceTimer = () => {
     setGraceTimeLeft(GRACE_PERIOD_SECONDS);
@@ -319,6 +319,12 @@ export default function StaffDashboard() {
     toast.success(`${calledTicket.ticket.ticket_number} completed`);
     setCalledTicket(null);
     setLastNoShow(null);
+    setVerified(false);
+    setGraceTimeLeft(0);
+    if (graceTimerRef.current) {
+      clearInterval(graceTimerRef.current);
+      graceTimerRef.current = null;
+    }
   };
 
   const recallPrevious = async () => {
