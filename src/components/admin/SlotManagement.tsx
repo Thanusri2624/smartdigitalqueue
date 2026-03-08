@@ -143,14 +143,18 @@ export default function SlotManagement() {
           <DialogHeader><DialogTitle className="font-display">Edit Slot — {editForm?.service_name}</DialogTitle></DialogHeader>
           {editForm && (
             <div className="space-y-4 mt-2">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Date</Label>
                   <Input type="date" value={editForm.slot_date} onChange={(e) => setEditForm((f: any) => ({ ...f, slot_date: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Time</Label>
+                  <Label>Start Time</Label>
                   <Input type="time" value={editForm.slot_time} onChange={(e) => setEditForm((f: any) => ({ ...f, slot_time: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>End Time</Label>
+                  <Input type="time" value={editForm.end_time} onChange={(e) => setEditForm((f: any) => ({ ...f, end_time: e.target.value }))} />
                 </div>
               </div>
               <div className="space-y-2">
