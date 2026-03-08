@@ -412,6 +412,35 @@ export type Database = {
           },
         ]
       }
+      staff_services: {
+        Row: {
+          created_at: string
+          id: string
+          service_id: string
+          staff_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          service_id: string
+          staff_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          service_id?: string
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
