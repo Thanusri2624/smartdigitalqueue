@@ -448,6 +448,7 @@ export type Database = {
       priority_type: "normal" | "senior" | "pregnant" | "disabled" | "emergency"
       queue_status:
         | "waiting"
+        | "called"
         | "serving"
         | "completed"
         | "cancelled"
@@ -581,7 +582,14 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user", "staff"],
       priority_type: ["normal", "senior", "pregnant", "disabled", "emergency"],
-      queue_status: ["waiting", "serving", "completed", "cancelled", "no_show"],
+      queue_status: [
+        "waiting",
+        "called",
+        "serving",
+        "completed",
+        "cancelled",
+        "no_show",
+      ],
     },
   },
 } as const
