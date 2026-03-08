@@ -36,8 +36,8 @@ export default function DocumentUpload({ serviceId, requiredDocuments, onAllUplo
   }, [user, serviceId]);
 
   useEffect(() => {
-    const allUploaded = requiredDocuments.every(doc => uploads[doc] && uploads[doc].status !== "rejected");
-    onAllUploaded(allUploaded);
+    const allVerified = requiredDocuments.every(doc => uploads[doc] && uploads[doc].status === "verified");
+    onAllUploaded(allVerified);
   }, [uploads, requiredDocuments, onAllUploaded]);
 
   const handleUpload = async (docName: string, file: File) => {
