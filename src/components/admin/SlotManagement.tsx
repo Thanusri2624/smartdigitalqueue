@@ -111,14 +111,18 @@ export default function SlotManagement() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Date</Label>
                   <Input type="date" value={form.slot_date} onChange={(e) => setForm(f => ({ ...f, slot_date: e.target.value }))} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Time</Label>
+                  <Label>Start Time</Label>
                   <Input type="time" value={form.slot_time} onChange={(e) => setForm(f => ({ ...f, slot_time: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>End Time</Label>
+                  <Input type="time" value={form.end_time} onChange={(e) => setForm(f => ({ ...f, end_time: e.target.value }))} />
                 </div>
               </div>
               <div className="space-y-2">
