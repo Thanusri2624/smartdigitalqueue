@@ -40,10 +40,15 @@ export default function SlotManagement() {
       return;
     }
     setLoading(true);
+    if (!form.end_time) {
+      toast.error("All fields are required");
+      return;
+    }
     const { error } = await supabase.from("service_slots").insert({
       service_id: form.service_id,
       slot_date: form.slot_date,
       slot_time: form.slot_time,
+      end_time: form.end_time,
       max_tokens: form.max_tokens,
     });
     if (error) toast.error(error.message);
