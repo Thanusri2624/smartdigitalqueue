@@ -229,6 +229,7 @@ export default function AdminDashboard() {
 
         <TabsContent value="activity"><StaffActivityLogs /></TabsContent>
         <TabsContent value="users"><UserManagement /></TabsContent>
+        <TabsContent value="staff-assign"><StaffServiceAssignment /></TabsContent>
       </Tabs>
     </div>
   );
