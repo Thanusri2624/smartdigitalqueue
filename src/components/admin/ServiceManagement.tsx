@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Edit, Loader2, Plus, Trash2, X } from "lucide-react";
+import { CalendarDays, Edit, Loader2, Plus, Trash2, X } from "lucide-react";
 
 interface ServiceForm {
   name: string;
@@ -110,13 +110,28 @@ export default function ServiceManagement() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-lg font-display font-semibold">Services</h2>
-        <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setForm(emptyForm); setEditId(null); } }}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="gradient-primary gap-1">
-              <Plus className="h-4 w-4" /> Add Service
-            </Button>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1"
+            onClick={async () => {
+              const svcWithoutSlots = services.filter(s => !s.slots_enabled);
+              if (svcWithoutSlots.length === 0) { toast.info("All services already have slots enabled"); return; }
+              const { error } = await supabase.from("services").update({ slots_enabled: true }).in("id", svcWithoutSlots.map(s => s.id));
+              if (error) toast.error(error.message);
+              else { toast.success(`Slot booking enabled for ${svcWithoutSlots.length} service(s)`); fetchServices(); }
+            }}
+          >
+            <CalendarDays className="h-4 w-4" /> Enable All Slots
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setForm(emptyForm); setEditId(null); } }}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gradient-primary gap-1">
+                <Plus className="h-4 w-4" /> Add Service
+              </Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -170,7 +185,8 @@ export default function ServiceManagement() {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
