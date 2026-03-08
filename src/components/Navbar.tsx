@@ -45,8 +45,10 @@ export default function Navbar() {
     navigate("/");
   };
 
+  const isCitizen = !isStaff && !isAdmin;
+
   const navLinks = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    ...(isCitizen ? [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }] : []),
     ...(isStaff || isAdmin ? [{ href: "/staff", label: "Staff", icon: ClipboardList }] : []),
     ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: Shield }] : []),
   ];
