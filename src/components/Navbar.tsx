@@ -45,8 +45,10 @@ export default function Navbar() {
     navigate("/");
   };
 
+  const isCitizen = !isStaff && !isAdmin;
+
   const navLinks = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    ...(isCitizen ? [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }] : []),
     ...(isStaff || isAdmin ? [{ href: "/staff", label: "Staff", icon: ClipboardList }] : []),
     ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: Shield }] : []),
   ];
@@ -56,7 +58,7 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-md">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link to={user ? "/dashboard" : "/"} className="flex items-center gap-2">
+        <Link to={user ? (isAdmin ? "/admin" : isStaff ? "/staff" : "/dashboard") : "/"} className="flex items-center gap-2">
           <div className="h-9 w-9 rounded-lg gradient-primary flex items-center justify-center">
             <span className="text-primary-foreground font-display font-bold text-lg">Q</span>
           </div>

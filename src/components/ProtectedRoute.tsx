@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
-export function ProtectedRoute({ children, adminOnly = false, staffOnly = false }: { children: ReactNode; adminOnly?: boolean; staffOnly?: boolean }) {
+export function ProtectedRoute({ children, adminOnly = false, staffOnly = false, citizenOnly = false }: { children: ReactNode; adminOnly?: boolean; staffOnly?: boolean; citizenOnly?: boolean }) {
   const { user, isAdmin, isStaff, loading } = useAuth();
 
   if (loading) {
@@ -15,8 +15,9 @@ export function ProtectedRoute({ children, adminOnly = false, staffOnly = false 
   }
 
   if (!user) return <Navigate to="/login" replace />;
-  if (adminOnly && !isAdmin) return <Navigate to="/dashboard" replace />;
+  if (adminOnly && !isAdmin) return <Navigate to={isStaff ? "/staff" : "/dashboard"} replace />;
   if (staffOnly && !isStaff && !isAdmin) return <Navigate to="/dashboard" replace />;
+  if (citizenOnly && (isStaff || isAdmin)) return <Navigate to={isAdmin ? "/admin" : "/staff"} replace />;
 
   return <>{children}</>;
 }
