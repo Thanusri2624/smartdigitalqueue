@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Edit, Loader2, Plus, Trash2, X } from "lucide-react";
+import { CalendarDays, Edit, Loader2, Plus, Trash2, X } from "lucide-react";
 
 interface ServiceForm {
   name: string;
