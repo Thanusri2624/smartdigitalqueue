@@ -103,7 +103,7 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
     await supabase.from("notifications").insert({
       user_id: user.id,
       title: "Slot Booked",
-      message: `Slot booked for ${serviceName} on ${format(new Date(slot.slot_date), "EEE, MMM d")} at ${slot.slot_time?.slice(0, 5)}. Your ticket: ${ticketNumber}.`,
+      message: `Slot booked for ${serviceName} on ${format(new Date(slot.slot_date), "EEE, MMM d")} from ${slot.slot_time?.slice(0, 5)} to ${slot.end_time?.slice(0, 5) || "?"}. Your ticket: ${ticketNumber}.`,
       ticket_id: ticketData.id,
     });
 
