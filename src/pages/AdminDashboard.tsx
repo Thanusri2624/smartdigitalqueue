@@ -6,11 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { BarChart3, CalendarDays, CheckCircle, Clock, PhoneCall, Settings, Users, XCircle } from "lucide-react";
+import { BarChart3, CalendarDays, CheckCircle, Clock, FileCheck, PhoneCall, Settings, Users, XCircle } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 import ServiceManagement from "@/components/admin/ServiceManagement";
 import SlotManagement from "@/components/admin/SlotManagement";
 import StaffActivityLogs from "@/components/admin/StaffActivityLogs";
+import DocumentVerificationStats from "@/components/admin/DocumentVerificationStats";
 
 const statusColors: Record<string, string> = {
   waiting: "bg-warning/10 text-warning",
@@ -137,6 +138,7 @@ export default function AdminDashboard() {
           <TabsTrigger value="queue">Queue</TabsTrigger>
           <TabsTrigger value="services"><Settings className="h-4 w-4 mr-1" />Services</TabsTrigger>
           <TabsTrigger value="slots"><CalendarDays className="h-4 w-4 mr-1" />Slots</TabsTrigger>
+          <TabsTrigger value="documents"><FileCheck className="h-4 w-4 mr-1" />Documents</TabsTrigger>
           <TabsTrigger value="counters">Counters</TabsTrigger>
           <TabsTrigger value="activity">Staff Activity</TabsTrigger>
         </TabsList>
@@ -202,6 +204,10 @@ export default function AdminDashboard() {
 
         <TabsContent value="slots">
           <SlotManagement />
+        </TabsContent>
+
+        <TabsContent value="documents">
+          <DocumentVerificationStats />
         </TabsContent>
 
         <TabsContent value="counters">

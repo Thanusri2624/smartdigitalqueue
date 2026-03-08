@@ -5,8 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { CheckCircle, FileCheck, PhoneCall, QrCode, Users, XCircle } from "lucide-react";
+import { CheckCircle, Eye, FileCheck, FileText, PhoneCall, QrCode, Users, XCircle } from "lucide-react";
 import QrScanner from "@/components/staff/QrScanner";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -27,6 +30,11 @@ export default function StaffDashboard() {
   const [tickets, setTickets] = useState<Tables<"queue_tickets">[]>([]);
   const [services, setServices] = useState<Tables<"services">[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectingDocId, setRejectingDocId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
 
   const fetchAll = async () => {
     const [t, s] = await Promise.all([
@@ -52,6 +60,7 @@ export default function StaffDashboard() {
     const channel = supabase
       .channel("staff-tickets")
       .on("postgres_changes", { event: "*", schema: "public", table: "queue_tickets" }, fetchAll)
+      .on("postgres_changes", { event: "*", schema: "public", table: "document_uploads" }, fetchDocuments)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
@@ -72,7 +81,6 @@ export default function StaffDashboard() {
     }).eq("id", next.id);
     if (error) { toast.error(error.message); return; }
 
-    // Notify user and log
     if (next.user_id) {
       await supabase.from("notifications").insert({
         user_id: next.user_id,
@@ -110,22 +118,65 @@ export default function StaffDashboard() {
     toast.success(`Ticket ${ticketNumber} → ${status}`);
   };
 
-  const verifyDocument = async (docId: string, status: "verified" | "rejected") => {
+  const viewDocument = async (filePath: string) => {
+    const { data } = await supabase.storage.from("documents").createSignedUrl(filePath, 300);
+    if (data?.signedUrl) {
+      setPreviewUrl(data.signedUrl);
+      setPreviewDialogOpen(true);
+    } else {
+      toast.error("Could not load document preview");
+    }
+  };
+
+  const verifyDocument = async (docId: string) => {
     const { error } = await supabase.from("document_uploads").update({
-      status,
+      status: "verified",
       verified_by: user?.id,
       updated_at: new Date().toISOString(),
     }).eq("id", docId);
     if (error) toast.error(error.message);
-    else { toast.success(`Document ${status}`); fetchDocuments(); }
+    else { toast.success("Document approved"); fetchDocuments(); }
 
     if (user) {
       await supabase.from("staff_activity_logs").insert({
         staff_id: user.id,
         action: "verified_document",
-        details: { message: `Document ${status}`, document_id: docId },
+        details: { message: "Document verified", document_id: docId },
       });
     }
+  };
+
+  const openRejectDialog = (docId: string) => {
+    setRejectingDocId(docId);
+    setRejectReason("");
+    setRejectDialogOpen(true);
+  };
+
+  const confirmReject = async () => {
+    if (!rejectingDocId) return;
+    if (!rejectReason.trim()) { toast.error("Please provide a reason for rejection"); return; }
+
+    const { error } = await supabase.from("document_uploads").update({
+      status: "rejected",
+      notes: rejectReason.trim(),
+      verified_by: user?.id,
+      updated_at: new Date().toISOString(),
+    }).eq("id", rejectingDocId);
+
+    if (error) toast.error(error.message);
+    else { toast.success("Document rejected with reason"); fetchDocuments(); }
+
+    if (user) {
+      await supabase.from("staff_activity_logs").insert({
+        staff_id: user.id,
+        action: "rejected_document",
+        details: { message: `Document rejected: ${rejectReason.trim()}`, document_id: rejectingDocId },
+      });
+    }
+
+    setRejectDialogOpen(false);
+    setRejectingDocId(null);
+    setRejectReason("");
   };
 
   const waitingTickets = tickets.filter(t => t.status === "waiting");
@@ -235,16 +286,20 @@ export default function StaffDashboard() {
         <TabsContent value="documents" className="space-y-2">
           {documents.map((doc) => (
             <Card key={doc.id} className="shadow-card border-0">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div>
+              <CardContent className="p-4 flex items-center justify-between flex-wrap gap-3">
+                <div className="flex-1">
                   <p className="font-medium text-sm">{doc.document_name}</p>
                   <p className="text-xs text-muted-foreground">Uploaded {new Date(doc.created_at).toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">User: {doc.user_id?.slice(0, 8)}…</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="gap-1 text-success" onClick={() => verifyDocument(doc.id, "verified")}>
-                    <CheckCircle className="h-3 w-3" /> Verify
+                  <Button size="sm" variant="outline" className="gap-1" onClick={() => viewDocument(doc.file_path)}>
+                    <Eye className="h-3 w-3" /> View
                   </Button>
-                  <Button size="sm" variant="outline" className="gap-1 text-destructive" onClick={() => verifyDocument(doc.id, "rejected")}>
+                  <Button size="sm" variant="outline" className="gap-1 text-success" onClick={() => verifyDocument(doc.id)}>
+                    <CheckCircle className="h-3 w-3" /> Approve
+                  </Button>
+                  <Button size="sm" variant="outline" className="gap-1 text-destructive" onClick={() => openRejectDialog(doc.id)}>
                     <XCircle className="h-3 w-3" /> Reject
                   </Button>
                 </div>
@@ -254,6 +309,46 @@ export default function StaffDashboard() {
           {documents.length === 0 && <p className="text-center text-muted-foreground py-8">No pending documents</p>}
         </TabsContent>
       </Tabs>
+
+      {/* Reject Dialog */}
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Document</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">Please provide a reason for rejection so the user can correct and re-upload.</p>
+            <Textarea
+              placeholder="e.g. Document is blurry, wrong document type, expired ID..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmReject}>Reject Document</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Document Preview Dialog */}
+      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Document Preview</DialogTitle>
+          </DialogHeader>
+          {previewUrl && (
+            <div className="overflow-auto max-h-[60vh]">
+              {previewUrl.includes(".pdf") ? (
+                <iframe src={previewUrl} className="w-full h-[55vh] border rounded" />
+              ) : (
+                <img src={previewUrl} alt="Document" className="w-full h-auto rounded" />
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

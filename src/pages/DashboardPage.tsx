@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Plus, QrCode, Ticket, Users } from "lucide-react";
+import { AlertCircle, CheckCircle, Clock, FileText, Plus, QrCode, Ticket, Users, XCircle } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 const priorityColors: Record<string, string> = {
@@ -27,6 +27,7 @@ const statusColors: Record<string, string> = {
 export default function DashboardPage() {
   const { user } = useAuth();
   const [tickets, setTickets] = useState<Tables<"queue_tickets">[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchTickets = async () => {
@@ -41,13 +42,25 @@ export default function DashboardPage() {
     setLoading(false);
   };
 
+  const fetchDocuments = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("document_uploads")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false });
+    setDocuments(data || []);
+  };
+
   useEffect(() => {
     fetchTickets();
+    fetchDocuments();
 
     if (!user) return;
     const channel = supabase
-      .channel("user-tickets")
+      .channel("user-dashboard")
       .on("postgres_changes", { event: "*", schema: "public", table: "queue_tickets", filter: `user_id=eq.${user.id}` }, fetchTickets)
+      .on("postgres_changes", { event: "*", schema: "public", table: "document_uploads", filter: `user_id=eq.${user.id}` }, fetchDocuments)
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user]);
@@ -55,12 +68,16 @@ export default function DashboardPage() {
   const activeTickets = tickets.filter((t) => t.status === "waiting" || t.status === "serving");
   const pastTickets = tickets.filter((t) => t.status !== "waiting" && t.status !== "serving");
 
+  const pendingDocs = documents.filter(d => d.status === "pending");
+  const rejectedDocs = documents.filter(d => d.status === "rejected");
+  const verifiedDocs = documents.filter(d => d.status === "verified");
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-display font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Manage your queue tickets</p>
+          <p className="text-muted-foreground">Manage your queue tickets & documents</p>
         </div>
         <Link to="/join-queue">
           <Button className="gradient-primary gap-2">
@@ -108,15 +125,79 @@ export default function DashboardPage() {
         <Card className="shadow-card border-0">
           <CardContent className="p-4 flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <QrCode className="h-5 w-5 text-primary" />
+              <FileText className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{activeTickets.filter(t => t.qr_code_data).length}</p>
-              <p className="text-xs text-muted-foreground">QR Codes</p>
+              <p className="text-2xl font-bold">{documents.length}</p>
+              <p className="text-xs text-muted-foreground">Documents</p>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Document Verification Status */}
+      {documents.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xl font-display font-semibold mb-4">Document Status</h2>
+          {pendingDocs.length > 0 && (
+            <Card className="shadow-card border-0 mb-3">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="h-4 w-4 text-warning" />
+                  <p className="font-medium text-sm text-warning">Pending Verification ({pendingDocs.length})</p>
+                </div>
+                <div className="space-y-1">
+                  {pendingDocs.map(doc => (
+                    <p key={doc.id} className="text-xs text-muted-foreground">• {doc.document_name}</p>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {rejectedDocs.length > 0 && (
+            <Card className="shadow-card border-0 border-l-4 border-l-destructive mb-3">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <XCircle className="h-4 w-4 text-destructive" />
+                  <p className="font-medium text-sm text-destructive">Rejected ({rejectedDocs.length})</p>
+                </div>
+                <div className="space-y-2">
+                  {rejectedDocs.map(doc => (
+                    <div key={doc.id}>
+                      <p className="text-xs font-medium">{doc.document_name}</p>
+                      {doc.notes && (
+                        <p className="text-xs text-destructive flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" /> {doc.notes}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <Link to="/join-queue">
+                  <Button size="sm" variant="outline" className="mt-3 gap-1">
+                    <Plus className="h-3 w-3" /> Re-upload Documents
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
+          {verifiedDocs.length > 0 && (
+            <Card className="shadow-card border-0 mb-3">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="h-4 w-4 text-success" />
+                  <p className="font-medium text-sm text-success">Approved ({verifiedDocs.length})</p>
+                </div>
+                <div className="space-y-1">
+                  {verifiedDocs.map(doc => (
+                    <p key={doc.id} className="text-xs text-muted-foreground">• {doc.document_name}</p>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* Active Tickets */}
       {activeTickets.length > 0 && (
@@ -185,7 +266,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {!loading && tickets.length === 0 && (
+      {!loading && tickets.length === 0 && documents.length === 0 && (
         <Card className="shadow-card border-0">
           <CardContent className="p-12 text-center">
             <Ticket className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
