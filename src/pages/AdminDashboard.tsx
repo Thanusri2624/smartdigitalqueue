@@ -13,6 +13,7 @@ import SlotManagement from "@/components/admin/SlotManagement";
 import StaffActivityLogs from "@/components/admin/StaffActivityLogs";
 import DocumentVerificationStats from "@/components/admin/DocumentVerificationStats";
 import UserManagement from "@/components/admin/UserManagement";
+import StaffServiceAssignment from "@/components/admin/StaffServiceAssignment";
 
 const statusColors: Record<string, string> = {
   waiting: "bg-warning/10 text-warning",
