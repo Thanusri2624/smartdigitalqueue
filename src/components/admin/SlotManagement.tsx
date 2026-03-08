@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { CalendarDays, Edit2, Loader2, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
-const emptyForm = { service_id: "", slot_date: "", slot_time: "", max_tokens: 10 };
+const emptyForm = { service_id: "", slot_date: "", slot_time: "", end_time: "", max_tokens: 10 };
 
 export default function SlotManagement() {
   const [services, setServices] = useState<any[]>([]);
