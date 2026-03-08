@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle, Clock, FileText, Plus, QrCode, Ticket, Users, XCircle } from "lucide-react";
+import { AlertCircle, CalendarDays, CheckCircle, Clock, FileText, Plus, QrCode, Ticket, Users, XCircle } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
+import SlotBooking from "@/components/queue/SlotBooking";
+import { toast } from "sonner";
 
 const priorityColors: Record<string, string> = {
   normal: "bg-primary/10 text-primary",
@@ -24,11 +26,22 @@ const statusColors: Record<string, string> = {
   no_show: "bg-muted text-muted-foreground",
 };
 
+interface ServiceWithDocs {
+  serviceId: string;
+  serviceName: string;
+  slotsEnabled: boolean;
+  requiredDocs: string[];
+  allVerified: boolean;
+}
+
 export default function DashboardPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [tickets, setTickets] = useState<Tables<"queue_tickets">[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [servicesWithDocs, setServicesWithDocs] = useState<ServiceWithDocs[]>([]);
+  const [slotBookedServices, setSlotBookedServices] = useState<Set<string>>(new Set());
 
   const fetchTickets = async () => {
     if (!user) return;
@@ -52,15 +65,65 @@ export default function DashboardPage() {
     setDocuments(data || []);
   };
 
+  const fetchServicesForBooking = async () => {
+    if (!user) return;
+    // Get all services that have slots enabled
+    const { data: services } = await supabase
+      .from("services")
+      .select("*")
+      .eq("is_active", true)
+      .eq("slots_enabled", true);
+
+    if (!services || services.length === 0) {
+      setServicesWithDocs([]);
+      return;
+    }
+
+    // Get user's document uploads
+    const { data: userDocs } = await supabase
+      .from("document_uploads")
+      .select("*")
+      .eq("user_id", user.id);
+
+    // Get user's existing slot bookings
+    const { data: bookings } = await supabase
+      .from("slot_bookings")
+      .select("*, service_slots(service_id)")
+      .eq("user_id", user.id)
+      .eq("status", "booked");
+
+    const bookedServiceIds = new Set(
+      (bookings || []).map((b: any) => b.service_slots?.service_id).filter(Boolean)
+    );
+    setSlotBookedServices(bookedServiceIds);
+
+    const result: ServiceWithDocs[] = services.map(svc => {
+      const requiredDocs: string[] = (svc.required_documents as string[]) || [];
+      const allVerified = requiredDocs.length === 0 || requiredDocs.every(docName =>
+        (userDocs || []).some(d => d.service_id === svc.id && d.document_name === docName && d.status === "verified")
+      );
+      return {
+        serviceId: svc.id,
+        serviceName: svc.name,
+        slotsEnabled: true,
+        requiredDocs,
+        allVerified,
+      };
+    });
+
+    setServicesWithDocs(result);
+  };
+
   useEffect(() => {
     fetchTickets();
     fetchDocuments();
+    fetchServicesForBooking();
 
     if (!user) return;
     const channel = supabase
       .channel("user-dashboard")
       .on("postgres_changes", { event: "*", schema: "public", table: "queue_tickets", filter: `user_id=eq.${user.id}` }, fetchTickets)
-      .on("postgres_changes", { event: "*", schema: "public", table: "document_uploads", filter: `user_id=eq.${user.id}` }, fetchDocuments)
+      .on("postgres_changes", { event: "*", schema: "public", table: "document_uploads", filter: `user_id=eq.${user.id}` }, () => { fetchDocuments(); fetchServicesForBooking(); })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user]);
@@ -71,6 +134,15 @@ export default function DashboardPage() {
   const pendingDocs = documents.filter(d => d.status === "pending");
   const rejectedDocs = documents.filter(d => d.status === "rejected");
   const verifiedDocs = documents.filter(d => d.status === "verified");
+
+  // Services ready for slot booking (docs verified, not already booked)
+  const bookableServices = servicesWithDocs.filter(s => s.allVerified && !slotBookedServices.has(s.serviceId));
+
+  const handleSlotBooked = (serviceId: string) => {
+    setSlotBookedServices(prev => new Set([...prev, serviceId]));
+    toast.success("Slot booked! Check your active tickets.");
+    fetchTickets();
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -196,6 +268,48 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           )}
+        </div>
+      )}
+
+      {/* Slot Booking Section - shown when user has verified docs for slot-enabled services */}
+      {bookableServices.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xl font-display font-semibold mb-4 flex items-center gap-2">
+            <CalendarDays className="h-5 w-5" /> Book a Slot
+          </h2>
+          <p className="text-sm text-muted-foreground mb-4">
+            Your documents are verified. You can now book a slot for the following services:
+          </p>
+          <div className="space-y-4">
+            {bookableServices.map(svc => (
+              <div key={svc.serviceId}>
+                <p className="font-medium text-sm mb-2">{svc.serviceName}</p>
+                <SlotBooking
+                  serviceId={svc.serviceId}
+                  onSlotBooked={() => handleSlotBooked(svc.serviceId)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Already booked services */}
+      {slotBookedServices.size > 0 && servicesWithDocs.filter(s => slotBookedServices.has(s.serviceId)).length > 0 && (
+        <div className="mb-8">
+          <Card className="shadow-card border-0">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CalendarDays className="h-4 w-4 text-success" />
+                <p className="font-medium text-sm text-success">Slots Booked</p>
+              </div>
+              <div className="space-y-1">
+                {servicesWithDocs.filter(s => slotBookedServices.has(s.serviceId)).map(svc => (
+                  <p key={svc.serviceId} className="text-xs text-muted-foreground">• {svc.serviceName}</p>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
