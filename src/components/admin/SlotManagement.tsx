@@ -195,8 +195,6 @@ export default function SlotManagement() {
                     {format(new Date(slot.slot_date), "MMM d, yyyy")} · {slot.slot_time?.slice(0, 5)} – {slot.end_time?.slice(0, 5) || "?"}
                   </p>
                 </div>
-                  </p>
-                </div>
               </div>
               <div className="flex items-center gap-2">
                 {!slot.is_active && <Badge variant="outline" className="text-destructive border-destructive/30">Inactive</Badge>}
