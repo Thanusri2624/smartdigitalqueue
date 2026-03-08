@@ -56,9 +56,16 @@ export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
     const { data: svcData } = await supabase.from("services").select("name, estimated_time_minutes").eq("id", serviceId).single();
     const serviceName = svcData?.name || "Service";
 
+    // Calculate correct position based on waiting tickets for this service
+    const { count: waitingCount } = await supabase
+      .from("queue_tickets")
+      .select("*", { count: "exact", head: true })
+      .eq("service_id", serviceId)
+      .eq("status", "waiting");
+
     // Generate queue ticket for this slot
     const ticketNumber = generateTicketNumber();
-    const position = slot.booked_count + 1;
+    const position = (waitingCount || 0) + 1;
     const qrData = JSON.stringify({
       ticket: ticketNumber,
       service: serviceName,
