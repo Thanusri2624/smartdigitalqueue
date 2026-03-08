@@ -10,7 +10,7 @@ import { format } from "date-fns";
 
 interface Props {
   serviceId: string;
-  onSlotBooked: (slotId: string) => void;
+  onSlotBooked: (slotId: string, ticketId: string) => void;
 }
 
 export default function SlotBooking({ serviceId, onSlotBooked }: Props) {
