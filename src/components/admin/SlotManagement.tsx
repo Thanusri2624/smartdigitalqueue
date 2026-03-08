@@ -76,6 +76,7 @@ export default function SlotManagement() {
       id: slot.id,
       slot_date: slot.slot_date,
       slot_time: slot.slot_time?.slice(0, 5),
+      end_time: slot.end_time?.slice(0, 5) || "",
       max_tokens: slot.max_tokens,
       is_active: slot.is_active,
       booked_count: slot.booked_count,
