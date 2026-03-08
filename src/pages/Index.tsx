@@ -39,20 +39,39 @@ export default function LandingPage() {
             real-time tracking, and intelligent wait time predictions.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to={user ? "/dashboard" : "/register"}>
-              <Button size="lg" className="gradient-primary gap-2 text-base px-8">
-                {user ? "Go to Dashboard" : "Get Started Free"}
-                <ArrowRight className="h-5 w-5" />
-              </Button>
-            </Link>
-            {!user && (
-              <Link to="/login">
-                <Button size="lg" variant="outline" className="text-base px-8">
-                  Sign In
+            {user ? (
+              <Link to="/dashboard">
+                <Button size="lg" className="gradient-primary gap-2 text-base px-8">
+                  Go to Dashboard
+                  <ArrowRight className="h-5 w-5" />
                 </Button>
               </Link>
+            ) : (
+              <>
+                <Link to="/register">
+                  <Button size="lg" className="gradient-primary gap-2 text-base px-8">
+                    Get Started Free
+                    <ArrowRight className="h-5 w-5" />
+                  </Button>
+                </Link>
+                <Link to="/login">
+                  <Button size="lg" variant="outline" className="text-base px-8">
+                    Citizen Sign In
+                  </Button>
+                </Link>
+              </>
             )}
           </div>
+          {!user && (
+            <div className="flex gap-4 justify-center mt-4">
+              <Link to="/login/staff">
+                <Button variant="ghost" size="sm" className="text-muted-foreground">Staff Login</Button>
+              </Link>
+              <Link to="/login/admin">
+                <Button variant="ghost" size="sm" className="text-muted-foreground">Admin Login</Button>
+              </Link>
+            </div>
+          )}
         </div>
       </section>
 
