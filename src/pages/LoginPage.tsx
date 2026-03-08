@@ -36,12 +36,22 @@ const roleConfig: Record<RoleType, { title: string; description: string; icon: t
 
 export default function LoginPage({ role = "citizen" }: { role?: RoleType }) {
   const navigate = useNavigate();
+  const { user, isAdmin, isStaff, loading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const config = roleConfig[role];
   const Icon = config.icon;
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (!authLoading && user) {
+      if (isAdmin) navigate("/admin", { replace: true });
+      else if (isStaff) navigate("/staff", { replace: true });
+      else navigate("/dashboard", { replace: true });
+    }
+  }, [user, isAdmin, isStaff, authLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
