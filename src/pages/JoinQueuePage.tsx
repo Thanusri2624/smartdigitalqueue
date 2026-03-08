@@ -219,7 +219,7 @@ export default function JoinQueuePage() {
               </CardContent>
             </Card>
           ) : (
-            <SlotBooking serviceId={selectedService} onSlotBooked={() => { setSlotBooked(true); toast.success("Slot booked! You can also join the live queue."); }} />
+            <SlotBooking serviceId={selectedService} onSlotBooked={(_slotId, ticketId) => { setSlotBooked(true); navigate(`/ticket/${ticketId}`); }} />
           )}
         </div>
       )}
