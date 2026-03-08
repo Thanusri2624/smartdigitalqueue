@@ -157,6 +157,7 @@ export default function AdminDashboard() {
           <TabsTrigger value="counters">Counters</TabsTrigger>
           <TabsTrigger value="activity">Staff Activity</TabsTrigger>
           <TabsTrigger value="users"><Users className="h-4 w-4 mr-1" />Users</TabsTrigger>
+          <TabsTrigger value="staff-assign"><Settings className="h-4 w-4 mr-1" />Staff Assignment</TabsTrigger>
         </TabsList>
 
         <TabsContent value="queue" className="space-y-4">
