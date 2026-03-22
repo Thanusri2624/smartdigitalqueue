@@ -569,55 +569,40 @@ export default function StaffDashboard() {
         </div>
       </div>
 
-      {/* Service Selector */}
-      <Card className="shadow-card border-0 mb-6">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex-1 min-w-[200px]">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 block">
-                Select Service Queue
-              </label>
-              <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choose a service to manage..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {services.filter(s => s.is_active).map(svc => (
-                    <SelectItem key={svc.id} value={svc.id}>
-                      <span className="flex items-center gap-2">
-                        {svc.name}
-                        <Badge variant="outline" className="ml-2 text-xs">
-                          {serviceWaitingCounts[svc.id] || 0} waiting
-                        </Badge>
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {selectedServiceId && (
-              <div className="flex gap-3">
-                {services.filter(s => s.is_active).map(svc => (
-                  <Button
-                    key={svc.id}
-                    size="sm"
-                    variant={selectedServiceId === svc.id ? "default" : "outline"}
-                    onClick={() => setSelectedServiceId(svc.id)}
-                    className="gap-1"
-                  >
-                    {svc.name}
-                    <Badge variant={selectedServiceId === svc.id ? "secondary" : "outline"} className="ml-1 text-xs">
-                      {serviceWaitingCounts[svc.id] || 0}
-                    </Badge>
-                  </Button>
-                ))}
-              </div>
-            )}
+      {/* Per-Service Queue Tabs */}
+      {services.filter(s => s.is_active).length === 0 ? (
+        <Card className="shadow-card border-0 mb-8">
+          <CardContent className="p-12 text-center">
+            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-display font-semibold mb-2">No Services Assigned</h3>
+            <p className="text-muted-foreground">You have no active services assigned. Contact your admin.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="mb-6">
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">
+            Service Queues
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {services.filter(s => s.is_active).map(svc => (
+              <Button
+                key={svc.id}
+                size="sm"
+                variant={selectedServiceId === svc.id ? "default" : "outline"}
+                onClick={() => setSelectedServiceId(svc.id)}
+                className={`gap-2 ${selectedServiceId === svc.id ? "gradient-primary text-primary-foreground" : ""}`}
+              >
+                {svc.name}
+                <Badge variant={selectedServiceId === svc.id ? "secondary" : "outline"} className="text-xs">
+                  {serviceWaitingCounts[svc.id] || 0} waiting
+                </Badge>
+              </Button>
+            ))}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
 
-      {!selectedServiceId && (
+      {!selectedServiceId && services.filter(s => s.is_active).length > 0 && (
         <Card className="shadow-card border-0 mb-8">
           <CardContent className="p-12 text-center">
             <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
